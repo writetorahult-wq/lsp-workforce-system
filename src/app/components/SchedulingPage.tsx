@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useToast } from "../contexts/ToastContext";
 import { PageHeader } from "./ui/PageHeader";
-import { fakeUsers } from "./fakeUsers";
+import { useEmployees } from "../contexts/EmployeeContext";
 
 type ShiftType = "day" | "night" | "off" | "vacation" | null;
 
@@ -51,8 +51,10 @@ export function SchedulingPage() {
     "Executive",
   ];
 
-  const employees = useMemo(
-    () => fakeUsers
+  const { employees } = useEmployees();
+
+  const schedulingEmployees = useMemo(
+    () => employees
       .filter((user) => user.role !== "hr_admin")
       .map((user) => ({
         id: user.id,
@@ -61,7 +63,7 @@ export function SchedulingPage() {
         position: user.role === "team_leader" ? "Team Leader" : "Employee",
         team: user.team || "",
       })),
-    []
+    [employees]
   );
 
   const getTeamRotationShift = (
@@ -164,8 +166,7 @@ export function SchedulingPage() {
 
     const shiftPattern: ShiftType[] = ["day", "night", "off", "day", "vacation", "day", "night"];
 
-    return fakeUsers
-      .filter((user) => user.role !== "hr_admin")
+    return schedulingEmployees
       .flatMap((employee, employeeIndex) =>
         scheduleDates.map((date, dayIndex) => ({
           employeeId: employee.id,
@@ -239,8 +240,8 @@ const setShiftForEmployee = (
     const rotationEntries: ScheduleEntry[] = [];
 
     monthDates.forEach((date, dayIndex) => {
-      fakeUsers
-        .filter((user) => user.role !== "hr_admin" && user.department.startsWith("Maintenance"))
+      schedulingEmployees
+        .filter((user) => user.department.startsWith("Maintenance"))
         .forEach((employee) => {
           const shift = getTeamRotationShift(employee, dayIndex);
           if (shift) {

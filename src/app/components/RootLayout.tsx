@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   Sparkles,
   TestTube,
+  UserPlus,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
@@ -22,7 +23,7 @@ import { NotificationPopup } from "./NotificationPopup";
 export function RootLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, loading } = useAuth();
   const { getPendingRequestsCount } = usePTO();
 
   const pendingPTOCount = useMemo(() =>
@@ -31,6 +32,10 @@ export function RootLayout() {
       : 0,
     [user?.role, user?.department, getPendingRequestsCount]
   );
+
+  if (loading) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -102,6 +107,12 @@ export function RootLayout() {
       name: "HR Admin",
       href: "/hr-admin",
       icon: Users,
+      roles: ["hr_admin"]
+    },
+    {
+      name: "Create User",
+      href: "/signup",
+      icon: UserPlus,
       roles: ["hr_admin"]
     },
     {

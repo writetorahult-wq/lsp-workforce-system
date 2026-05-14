@@ -24,8 +24,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { usePTO } from "../contexts/PTOContext";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useToast } from "../contexts/ToastContext";
+import { useEmployees } from "../contexts/EmployeeContext";
 import { PageHeader } from "./ui/PageHeader";
-import { fakeUsers } from "./fakeUsers";
 
 type ShiftType = "day" | "night" | "off" | "vacation" | null;
 
@@ -81,8 +81,10 @@ export function AutoSchedulingPage() {
   const [genConsecutivePrevention, setGenConsecutivePrevention] = useState(true);
   const [genForce15DayBlocks, setGenForce15DayBlocks] = useState(false);
 
-  const employees: Employee[] = useMemo(
-    () => fakeUsers
+  const { employees } = useEmployees();
+
+  const schedulingEmployees: Employee[] = useMemo(
+    () => employees
       .filter((user) => user.role !== "hr_admin")
       .map((user) => ({
         id: user.id,
@@ -90,7 +92,7 @@ export function AutoSchedulingPage() {
         department: user.department,
         position: user.role === "team_leader" ? "Team Leader" : "Employee",
       })),
-    []
+    [employees]
   );
 
   // Use actual PTO data from context

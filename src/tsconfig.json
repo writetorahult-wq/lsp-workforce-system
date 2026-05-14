@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "types": ["vite/client"]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "vite-env.d.ts"
+  ]
+}

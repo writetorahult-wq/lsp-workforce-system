@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useAuth } from "../contexts/AuthContext";
-import { fakeUsers } from "./fakeUsers";
+import { useEmployees } from "../contexts/EmployeeContext";
 import { QuickActionsPanel } from "./QuickActionsPanel";
 
 export function HRAdminDashboard() {
@@ -27,11 +27,13 @@ export function HRAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Calculate stats from fake users data
+  const { employees } = useEmployees();
+
   const stats = useMemo(() => {
-    const totalEmployees = fakeUsers.length;
-    const activeEmployees = fakeUsers.filter(u => u.role !== 'hr_admin').length; // Exclude admin from active count
-    const teamLeaders = fakeUsers.filter(u => u.role === 'team_leader').length;
-    const departments = new Set(fakeUsers.map(u => u.department)).size;
+    const totalEmployees = employees.length;
+    const activeEmployees = employees.filter((u) => u.role !== "hr_admin").length;
+    const teamLeaders = employees.filter((u) => u.role === "team_leader").length;
+    const departments = new Set(employees.map((u) => u.department)).size;
 
     return [
       { label: "Total Employees", value: totalEmployees.toString(), change: "Across all departments", color: "blue", link: "/employees" },
@@ -41,34 +43,38 @@ export function HRAdminDashboard() {
     ];
   }, []);
 
-  // Use fake users data for employee list
-  const employees = useMemo(() => {
-    return fakeUsers.map(user => ({
+  // Use employees data for employee list view
+  const employeeRows = useMemo(() => {
+    return employees.map((user) => ({
       id: user.id,
       name: user.name,
       email: user.email,
       department: user.department,
-      position: user.role === 'hr_admin' ? 'HR Administrator' :
-                user.role === 'team_leader' ? 'Team Leader' : 'Employee',
-      status: 'active' as const,
-      joinDate: 'Jan 2024', // Mock join date
+      position:
+        user.role === "hr_admin"
+          ? "HR Administrator"
+          : user.role === "team_leader"
+          ? "Team Leader"
+          : "Employee",
+      status: "active" as const,
+      joinDate: "Jan 2024",
     }));
-  }, []);
+  }, [employees]);
 
-  // Calculate department distribution from fake users
+  // Calculate department distribution from employee data
   const departmentData = useMemo(() => {
-    const deptCount = fakeUsers.reduce((acc, user) => {
+    const deptCount = employeeRows.reduce((acc, user) => {
       acc[user.department] = (acc[user.department] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const colors = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#06b6d4', '#dc2626'];
+    const colors = ["#2563eb", "#16a34a", "#9333ea", "#ea580c", "#06b6d4", "#dc2626"];
     return Object.entries(deptCount).map(([name, value], index) => ({
       name,
       value,
-      color: colors[index % colors.length]
+      color: colors[index % colors.length],
     }));
-  }, []);
+  }, [employees]);
 
   // HR-specific metrics
   const hrMetrics = [
@@ -88,22 +94,22 @@ export function HRAdminDashboard() {
 
   const ptoApprovals = [
     {
-      employee: fakeUsers.find(u => u.id === 2)?.name || "Cho Sanghyeok",
-      department: fakeUsers.find(u => u.id === 2)?.department || "Maintenance",
+      employee: employeeRows.find((u) => u.id === 2)?.name || "Cho Sanghyeok",
+      department: employeeRows.find((u) => u.id === 2)?.department || "Maintenance",
       dates: "May 20-22, 2026",
       days: 3,
       type: "Vacation",
     },
     {
-      employee: fakeUsers.find(u => u.id === 3)?.name || "An Youngdo",
-      department: fakeUsers.find(u => u.id === 3)?.department || "Maintenance",
+      employee: employeeRows.find((u) => u.id === 3)?.name || "An Youngdo",
+      department: employeeRows.find((u) => u.id === 3)?.department || "Maintenance",
       dates: "Jun 1-5, 2026",
       days: 5,
       type: "Vacation",
     },
     {
-      employee: fakeUsers.find(u => u.id === 10)?.name || "Enrique",
-      department: fakeUsers.find(u => u.id === 10)?.department || "Maintenance",
+      employee: employeeRows.find((u) => u.id === 10)?.name || "Enrique",
+      department: employeeRows.find((u) => u.id === 10)?.department || "Maintenance",
       dates: "May 15, 2026",
       days: 1,
       type: "Personal",

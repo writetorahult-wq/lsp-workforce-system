@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
-import { fakeUsers } from "../components/fakeUsers";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "../../lib/supabase";
 
 export type UserRole = "employee" | "team_leader" | "hr_admin";
 
@@ -9,69 +9,135 @@ interface User {
   email: string;
   role: UserRole;
   department: string;
+  position?: string;
   team?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<UserRole>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
-}
-
-interface FakeUser {
-  id: number;
-  name: string;
-  email: string;
-  password: string;
-  role: UserRole;
-  department: string;
-  team?: string;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    // Initialize from localStorage
-    const savedUser = localStorage.getItem("currentUser");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+const roleFromEmail = (email: string): UserRole => {
+  const normalized = email.trim().toLowerCase();
+  if (normalized === "admin@lsp.llc") return "hr_admin";
+  if (normalized === "teamlead@lsp.llc") return "team_leader";
+  return "employee";
+};
 
-  const authenticateUser = (email: string, password: string): FakeUser | null => {
-    const normalizedEmail = email.toLowerCase();
-    return (
-      fakeUsers.find(
-        (demoUser) => demoUser.email.toLowerCase() === normalizedEmail && demoUser.password === password
-      ) || null
-    );
+const defaultDepartment = (role: UserRole) => {
+  if (role === "hr_admin") return "Executive";
+  if (role === "team_leader") return "Manufacturing";
+  return "Operations";
+};
+
+const defaultPosition = (role: UserRole) => {
+  if (role === "hr_admin") return "HR Administrator";
+  if (role === "team_leader") return "Team Leader";
+  return "Employee";
+};
+
+async function getUserFromEmail(email: string): Promise<User | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id, name, email, role, department, position, team")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  const role = roleFromEmail(normalizedEmail);
+
+  if (error) {
+    console.warn("[Supabase] Error fetching employee record:", error.message);
+  }
+
+  if (data && data.email) {
+    return {
+      id: data.id,
+      name: data.name || normalizedEmail,
+      email: data.email,
+      role: (data.role as UserRole) || role,
+      department: data.department || defaultDepartment(role),
+      position: data.position || defaultPosition(role),
+      team: data.team ?? (role === "team_leader" ? "Leadership" : undefined),
+    };
+  }
+
+  return {
+    id: 0,
+    name: normalizedEmail,
+    email: normalizedEmail,
+    role,
+    department: defaultDepartment(role),
+    position: defaultPosition(role),
+    team: role === "team_leader" ? "Leadership" : undefined,
   };
+}
 
-  const login = async (email: string, password: string): Promise<UserRole> => {
-    const matchedUser = authenticateUser(email, password);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    if (!matchedUser) {
-      throw new Error("Invalid email or password");
+  const setUserFromSession = async (sessionUser: any) => {
+    if (!sessionUser?.email) {
+      setUser(null);
+      return;
     }
 
-    const authenticatedUser: User = {
-      id: matchedUser.id,
-      name: matchedUser.name,
-      email: matchedUser.email,
-      role: matchedUser.role,
-      department: matchedUser.department,
-      team: matchedUser.team,
-    };
-
-    setUser(authenticatedUser);
-    localStorage.setItem("currentUser", JSON.stringify(authenticatedUser));
-
-    return matchedUser.role;
+    const authUser = await getUserFromEmail(sessionUser.email);
+    setUser(authUser);
   };
 
-  const logout = () => {
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
+      await setUserFromSession(data.session?.user ?? null);
+      setLoading(false);
+    };
+
+    loadSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+      await setUserFromSession(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      listener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string): Promise<UserRole> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error || !data.session?.user) {
+      throw error ?? new Error("Login failed. Please check your credentials.");
+    }
+
+    const authUser = await getUserFromEmail(data.session.user.email || email);
+    setUser(authUser);
+    setLoading(false);
+    return authUser?.role ?? roleFromEmail(email);
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem("currentUser");
   };
 
   return (
@@ -81,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         isAuthenticated: !!user,
+        loading,
       }}
     >
       {children}

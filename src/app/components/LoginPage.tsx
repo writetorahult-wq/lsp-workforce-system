@@ -1,3 +1,4 @@
+import { supabase } from "../../lib/supabase";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Briefcase, AlertCircle } from "lucide-react";
@@ -10,21 +11,57 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
 
     try {
-      await login(email, password);
+      setIsLoading(true);
+      setError("");
+
+      await login(email.trim(), password);
       navigate("/");
     } catch (err) {
-      setError("Invalid email or password");
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail) {
+      setResetError("Please enter your email address.");
+      return;
+    }
+
+    try {
+      setIsResetting(true);
+      setResetError("");
+      setResetMessage("");
+
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+        redirectTo: `${window.location.origin}/login`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setResetMessage(
+        "If the email exists, a password reset link has been sent. Check your inbox."
+      );
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : "Unable to send reset email.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),transparent_32%),linear-gradient(180deg,_#f8fbff_0%,_#ffffff_100%)] flex items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
       <div className="w-full max-w-2xl">
@@ -103,29 +140,86 @@ export function LoginPage() {
                   />
                   <span>Remember me</span>
                 </label>
-                <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                  Forgot Password?
-                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReset((current) => !current);
+                    setResetError("");
+                    setResetMessage("");
+                  }}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  disabled={isLoading}
+                >
+                  {showReset ? "Back to sign in" : "Forgot Password?"}
+                </button>
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`w-full rounded-3xl px-6 py-4 text-base font-semibold text-white shadow-lg transition-all ${
-                  isLoading
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Signing in...
-                  </span>
-                ) : (
-                  "Sign In"
-                )}
-              </button>
+              {showReset && (
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm text-slate-600 mb-4">
+                    Enter your email address to receive a password reset link.
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="resetEmail" className="block text-sm font-medium text-slate-700 mb-2">
+                        Reset Email
+                      </label>
+                      <input
+                        id="resetEmail"
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => {
+                          setResetEmail(e.target.value);
+                          setResetError("");
+                          setResetMessage("");
+                        }}
+                        className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        placeholder="your.name@lsp.llc"
+                        disabled={isResetting}
+                      />
+                    </div>
+                    {resetError && (
+                      <p className="text-sm text-red-600">{resetError}</p>
+                    )}
+                    {resetMessage && (
+                      <p className="text-sm text-green-600">{resetMessage}</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      disabled={isResetting}
+                      className={`w-full rounded-3xl px-6 py-4 text-base font-semibold text-white shadow-lg transition-all ${
+                        isResetting
+                          ? "bg-blue-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
+                    >
+                      {isResetting ? "Sending reset link..." : "Send Reset Link"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!showReset && (
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`w-full rounded-3xl px-6 py-4 text-base font-semibold text-white shadow-lg transition-all ${
+                    isLoading
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Signing in...
+                    </span>
+                  ) : (
+                    "Sign In"
+                  )}
+                </button>
+              )}
             </form>
           </div>
         </div>

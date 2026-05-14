@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { fakeUsers } from "./fakeUsers";
+import { useEmployees } from "../contexts/EmployeeContext";
 
 type ShiftType = "day" | "night" | "off" | "vacation" | null;
 
@@ -42,10 +42,12 @@ export function ScheduleGridView() {
     return stored ? JSON.parse(stored) : [];
   }, []);
 
+  const { employees } = useEmployees();
+
   // Get all employees
   const allEmployees: Employee[] = useMemo(
     () =>
-      fakeUsers
+      employees
         .filter((user) => user.role !== "hr_admin")
         .map((user) => ({
           id: user.id,
@@ -53,7 +55,7 @@ export function ScheduleGridView() {
           department: user.department,
           team: user.team,
         })),
-    []
+    [employees]
   );
 
   // Get unique teams

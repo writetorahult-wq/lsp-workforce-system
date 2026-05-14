@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Sun, Moon, Home, Plane, Send, AlertCircle, Bell, ArrowRight, Search, Filter } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { fakeUsers } from "./fakeUsers";
+import { useEmployees, Employee } from "../contexts/EmployeeContext";
 
 type ShiftType = "day" | "night" | "off" | "vacation" | null;
 
@@ -31,13 +31,15 @@ export function EmployeeScheduleView() {
   const isTeamLeader = user?.role === "team_leader";
   const currentEmployeeId = user?.id;
 
+  const { employees } = useEmployees();
+
   const employeeMap = useMemo(
-    () => Object.fromEntries(fakeUsers.map((employee) => [employee.id, employee])),
-    []
+    () => Object.fromEntries(employees.map((employee) => [employee.id, employee])),
+    [employees]
   );
 
   const scheduleByEmployee = useMemo(() => {
-    const grouped: Record<number, { employee: typeof fakeUsers[number]; shifts: ScheduleEntry[] }> = {};
+    const grouped: Record<number, { employee: Employee; shifts: ScheduleEntry[] }> = {};
     allSchedules.forEach((entry) => {
       const employee = employeeMap[entry.employeeId];
       if (!employee) return;
@@ -62,9 +64,9 @@ export function EmployeeScheduleView() {
   }, [scheduleByEmployee, searchTerm, departmentFilter]);
 
   const departments = useMemo(() => {
-    const depts = [...new Set(fakeUsers.map(u => u.department))];
+    const depts = [...new Set(employees.map((u) => u.department))];
     return ["all", ...depts];
-  }, []);
+  }, [employees]);
 
   const getNextShift = (shifts: ScheduleEntry[]) => {
     const today = new Date();

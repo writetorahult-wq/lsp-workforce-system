@@ -14,6 +14,7 @@ import { HRAdminDashboard } from "./components/HRAdminDashboard";
 import { ManagerDashboard } from "./components/ManagerDashboard";
 import { EmployeeManagementPage } from "./components/EmployeeManagementPage";
 import { NotFound } from "./components/NotFound";
+import { SignupPage } from "./components/SignupPage";
 import { TestPage } from "./components/TestPage";
 import { InteractionTestPage } from "./components/InteractionTestPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -50,6 +51,10 @@ function ProtectedManager() {
 
 function ProtectedEmployeeManagement() {
   return <ProtectedRoute element={EmployeeManagementPage} allowedRoles={["hr_admin"]} />;
+}
+
+function ProtectedSignup() {
+  return <ProtectedRoute element={SignupPage} allowedRoles={["hr_admin"]} />;
 }
 
 function RoleBasedDashboard() {
@@ -134,6 +139,10 @@ export const router = createBrowserRouter([
       {
         path: "employees",
         Component: ProtectedEmployeeManagement,
+      },
+      {
+        path: "signup",
+        Component: ProtectedSignup,
       },
       {
         path: "*",

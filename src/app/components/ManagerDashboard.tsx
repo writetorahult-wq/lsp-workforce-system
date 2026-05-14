@@ -10,15 +10,16 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { useAuth } from "../contexts/AuthContext";
-import { fakeUsers } from "./fakeUsers";
+import { useEmployees } from "../contexts/EmployeeContext";
 import { QuickActionsPanel } from "./QuickActionsPanel";
 
 export function ManagerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { employees } = useEmployees();
 
-  // Calculate team stats from fake users data
-  const teamMembers = fakeUsers.filter(u => u.role === 'employee' && u.department === user?.department);
+  // Calculate team stats from employee data
+  const teamMembers = employees.filter((u) => u.role === "employee" && u.department === user?.department);
   const teamStats = [
     { label: "Team Members", value: teamMembers.length.toString(), change: "In your department", color: "blue", link: "/manager" },
     { label: "Present Today", value: Math.floor(teamMembers.length * 0.92).toString(), change: "92% attendance rate", color: "green", link: "/attendance" },
