@@ -23,10 +23,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const roleFromEmail = (email: string): UserRole => {
-  const normalized = email.trim().toLowerCase();
-  if (normalized === "admin@lsp.llc") return "hr_admin";
-  if (normalized === "teamlead@lsp.llc") return "team_leader";
+const roleFromEmail = (): UserRole => {
   return "employee";
 };
 
