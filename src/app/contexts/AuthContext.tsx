@@ -23,7 +23,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const roleFromEmail = (): UserRole => {
+const roleFromEmail = (email: string): UserRole => {
   return "employee";
 };
 
@@ -96,25 +96,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let loadTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const loadSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!isMounted) return;
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!isMounted) return;
 
-      await setUserFromSession(data.session?.user ?? null);
-      setLoading(false);
+        await setUserFromSession(data.session?.user ?? null);
+      } catch (error) {
+        console.warn("[Auth] Failed to load session", error);
+        if (!isMounted) return;
+        setUser(null);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          if (loadTimeout) {
+            clearTimeout(loadTimeout);
+          }
+        }
+      }
     };
+
+    loadTimeout = setTimeout(() => {
+      if (isMounted) {
+        console.warn("[Auth] Session load timed out, falling back to unauthenticated state.");
+        setLoading(false);
+      }
+    }, 3000);
 
     loadSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
-      await setUserFromSession(session?.user ?? null);
-      setLoading(false);
+
+      try {
+        await setUserFromSession(session?.user ?? null);
+      } catch (error) {
+        console.warn("[Auth] Error handling auth state change", error);
+        setUser(null);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     });
 
     return () => {
       isMounted = false;
+      if (loadTimeout) {
+        clearTimeout(loadTimeout);
+      }
       listener?.subscription?.unsubscribe();
     };
   }, []);

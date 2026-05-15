@@ -34,7 +34,13 @@ export function RootLayout() {
   );
 
   if (loading) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="rounded-3xl border border-slate-200 bg-white/95 px-6 py-5 text-sm text-slate-700 shadow-lg shadow-slate-900/5">
+          Loading dashboard...
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
